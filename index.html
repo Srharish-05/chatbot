@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MKCE Direct</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Base Styles - From styles.css */
+        :root {
+            --dark-bg: #000000; /* Black */
+            --dark-surface: #1A1A1A; /* Dark Grey (Sidebar/AI message background) */
+            --dark-surface-light: #2C2C2C; /* Medium Dark Grey (Hover/Search/Code) */
+            --text-color: #FFFFFF; /* White */
+            --light-text-color: #AAAAAA; /* Light Grey (Secondary/Muted text) */
+            --accent-color: #666666; /* Mid Grey Accent for subtle highlight/button */
+            --input-bg: #121212; /* Very Dark Grey for input box */
+            --mic-active: #FF4136; /* Bright Red for active recording */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR STYLING --- */
+        .sidebar {
+            width: 250px;
+            background-color: var(--dark-surface);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--dark-surface-light);
+            flex-shrink: 0;
+        }
+
+        /* Search Bar */
+        .sidebar-header {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 10px 8px 30px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--dark-surface-light);
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .search-input::placeholder {
+            color: var(--light-text-color);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--light-text-color);
+            font-size: 14px;
+        }
+
+        /* Buttons */
+        .new-chat-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--accent-color);
+            color: var(--text-color); /* Changed to white for contrast */
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .new-chat-btn .icon {
+            font-size: 14px;
+            margin-right: 10px;
+            color: var(--text-color); /* Changed to white for contrast */
+        }
+        
+        /* The 'explore-gems-btn' styling is now redundant but kept for cleanliness if the structure remains. */
+        .explore-gems-btn {
+            display: none; /* Removed the element from the flow */
+        }
+        
+        /* Recent Section */
+        .recent-section {
+            margin-top: 15px;
+            flex-grow: 1;
+            /* Scroll capability with hidden bar */
+            overflow-y: auto; 
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .recent-section::-webkit-scrollbar {
+            display: none;
+        }
+
+        .recent-section h3 {
+            color: var(--light-text-color);
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        /* STYLES FOR DELETE OPTION */
+        .history-item-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .history-query-text {
+            flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            /* Allow the text itself to be clickable and take up space */
+            padding-right: 5px; 
+        }
+
+        .delete-history-btn {
+            font-size: 14px;
+            color: var(--light-text-color);
+            margin-left: 10px;
+            cursor: pointer;
+            visibility: hidden; /* Hide by default */
+            opacity: 0;
+            transition: opacity 0.2s, color 0.2s;
+            flex-shrink: 0; /* Prevent the icon from shrinking */
+            padding: 2px;
+        }
+
+        .history-list li:hover .delete-history-btn {
+            visibility: visible;
+            opacity: 1;
+            color: var(--text-color);
+        }
+
+        .delete-history-btn:hover {
+            color: #FF6B6B; /* Red color for delete action */
+        }
+        /* END STYLES */
+
+        .history-list li {
+            font-size: 14px;
+            color: var(--light-text-color);
+            padding: 8px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            display: flex; /* Make the LI a container for the wrapper */
+        }
+
+        .history-list li:hover {
+            background-color: var(--dark-surface-light);
+            color: var(--text-color);
+        }
+
+        /* Sidebar Footer */
+        .sidebar-footer {
+            /* Now mostly empty, but border is kept to separate the space */
+            border-top: 1px solid var(--dark-surface-light);
+            padding-top: 15px;
+        }
+
+        .sidebar-footer a {
+            display: flex;
+            align-items: center;
+            color: var(--light-text-color);
+            text-decoration: none;
+            padding: 8px 5px;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-bottom: 5px;
+            /* Will be hidden, but keeping the style just in case */
+        }
+
+        .sidebar-footer a i {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .sidebar-footer a:hover {
+            background-color: var(--dark-surface-light);
+            color: var(--text-color);
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #DDDDDD; /* Light Grey */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 500;
+            color: #000000; /* Black text on light grey avatar */
+        }
+
+        /* --- MAIN CONTENT STYLING --- */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header */
+        .top-header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: var(--dark-bg);
+            border-bottom: 1px solid var(--dark-surface-light);
+            flex-shrink: 0;
+        }
+
+        .top-header .settings-icon {
+            font-size: 20px;
+            color: var(--light-text-color);
+            cursor: pointer;
+            margin-right: 20px;
+        }
+
+        /* Chat Area (The main message viewing area) */
+        .chat-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 20px 30px 100px 30px; /* Increased bottom padding to prevent overlap with fixed input */
+        }
+
+        /* Initial Screen - Greeting and Centering */
+        .chat-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100%; /* Ensure it takes up full height of chat-area */
+        }
+
+        /* Greeting */
+        .greeting {
+            font-size: 3.5rem;
+            font-weight: 500;
+            color: var(--light-text-color);
+            margin-bottom: 20px;
+            padding: 0 20px;
+            margin-top: auto;
+            margin-bottom: auto;
+        }
+
+        /* Input Container - FIXED POSITIONING */
+        .input-container {
+            width: 100%;
+            max-width: 800px; 
+            /* CRITICAL FIX: Use fixed positioning relative to the viewport */
+            position: fixed;
+            bottom: 20px;
+            left: 250px; /* Width of sidebar */
+            right: 0;
+            margin: 0 auto; /* Centers the input box horizontally */
+            /* Calculate the width of the input area */
+            width: calc(100% - 250px);
+            max-width: 800px; /* Keep max-width */
+            padding: 0 30px; /* Padding for the sides of the window */
+            z-index: 1000; /* Ensure it stays on top */
+        }
+
+        .input-box {
+            display: flex;
+            align-items: flex-end; /* Align items to the bottom */
+            background-color: var(--input-bg);
+            border: 1px solid var(--dark-surface-light);
+            border-radius: 25px;
+            padding: 10px 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .input-box.is-focused {
+            border-color: var(--accent-color);
+            box-shadow: 0 4px 12px rgba(102, 102, 102, 0.3);
+        }
+
+        #main-input {
+            flex-grow: 1;
+            border: none;
+            background: none;
+            color: var(--text-color);
+            font-size: 16px;
+            resize: none; /* Disable manual resize */
+            outline: none;
+            padding: 5px 10px;
+            line-height: 1.5;
+            max-height: 150px; /* Limit height of the textarea */
+            overflow-y: auto;
+        }
+
+        /* Placeholder style for dark mode */
+        #main-input::placeholder {
+            color: var(--light-text-color);
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--light-text-color);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 5px;
+            margin-left: 5px;
+            transition: color 0.2s;
+            line-height: 1; /* Aligns the icon to the text input */
+        }
+
+        .icon-btn:hover {
+            color: var(--text-color);
+        }
+        
+        /* New Style for Active Microphone */
+        .mic-btn.is-active i {
+            color: var(--mic-active); /* Bright Red when recording */
+        }
+
+        .action-btn {
+            background-color: var(--dark-surface-light);
+            color: var(--text-color);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .action-btn i {
+            margin-right: 5px;
+            color: var(--accent-color);
+        }
+
+        .action-btn:hover {
+            background-color: #444444; /* Darker grey on hover */
+        }
+
+        /* --- MESSAGE STYLING (New) --- */
+        .message-container {
+            display: flex;
+            align-items: flex-start;
+            padding: 15px 0;
+            margin-bottom: 5px;
+            width: 100%; /* Important: ensure full width for centering logic below */
+        }
+
+        /* Reset centering when messages are present */
+        .chat-content:has(.message-container) {
+            display: block;
+            min-height: auto;
+        }
+
+        .user-message-container {
+            /* Now handled by JS, but keeping the class for clarity if needed */
+            margin-left: auto;
+        }
+
+        .message-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 500;
+            flex-shrink: 0;
+            margin-right: 15px;
+        }
+
+        .user-avatar {
+            /* Handled by user-avatar in sidebar style, but keeping a placeholder here */
+            background-color: #DDDDDD;
+            color: #000000;
+            margin-left: 15px;
+            margin-right: 0;
+        }
+
+        .ai-avatar {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+        }
+
+        /* AI Message bubble style */
+        .ai-message-container {
+            background-color: var(--dark-surface);
+            padding: 12px 15px;
+            border-radius: 18px;
+            border-top-left-radius: 4px; /* Slight notch look */
+            max-width: 80%;
+            margin-right: auto; /* Push to the left */
+        }
+        
+        .ai-message-container * {
+            max-width: 100%; /* Ensure content inside the bubble doesn't overflow */
+        }
+
+        .message-text {
+            color: var(--text-color);
+            line-height: 1.6;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            font-size: 16px;
+        }
+
+        .user-message-text {
+            /* User message content gets its own styling */
+            background-color: #007AFF; /* A bright blue for user messages */
+            padding: 12px 15px;
+            border-radius: 18px;
+            border-bottom-right-radius: 4px; /* Slight notch look */
+            max-width: 80%;
+            margin-left: auto; /* Push to the right */
+        }
+        
+        /* Loading/Typing animation for AI */
+        .loading-dot {
+            display: inline-block;
+            opacity: 0;
+            animation: dot-loading 1.2s infinite ease-in-out;
+        }
+
+        .loading-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes dot-loading {
+            0%, 80%, 100% {
+                opacity: 0;
+            }
+            40% {
+                opacity: 1;
+            }
+        }
+        
+        /* Markdown Styling - Code Blocks */
+        .message-text pre {
+            background-color: var(--dark-surface-light);
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .message-text code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            color: #E6E6FA; /* Light Purple for code */
+        }
+        
+        /* Inline code */
+        .message-text p > code {
+            background-color: var(--dark-surface-light);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        /* Headings, Lists, etc. */
+        .message-text h1, .message-text h2, .message-text h3 {
+            margin: 15px 0 10px;
+            color: var(--text-color);
+            font-weight: 700;
+        }
+
+        .message-text p {
+            margin-bottom: 10px;
+        }
+
+        .message-text ul, .message-text ol {
+            margin: 5px 0 10px 20px;
+            list-style-position: inside;
+        }
+        
+        /* New Styles for Response Actions/Buttons (if you implement them later) */
+        .response-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            margin-left: 45px; /* Align with text by accounting for avatar */
+        }
+        
+        .response-actions .action-btn i {
+            font-size: 14px;
+        }
+        
+        /* Utility Classes */
+        .d-none {
+            display: none !important;
+        }
+
+
+        /* Media Queries for Responsiveness */
+        @media (max-width: 1024px) {
+            /* Adjust input container positioning for smaller screens to account for the sidebar */
+            .input-container {
+                left: 250px;
+                width: calc(100% - 250px);
+                padding: 0 30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px; /* Collapse sidebar */
+                padding: 10px;
+            }
+
+            .sidebar-header, .new-chat-btn .more-icon, .recent-section, .sidebar-footer {
+                display: none;
+            }
+
+            .new-chat-btn {
+                justify-content: center;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                padding: 0;
+            }
+
+            .new-chat-btn .icon {
+                margin: 0;
+            }
+
+            .new-chat-btn span {
+                display: none;
+            }
+
+            .chat-area {
+                padding: 0 10px;
+            }
+
+            .greeting {
+                font-size: 2.5rem;
+            }
+            
+            .input-container {
+                max-width: 100%;
+                left: 70px; /* Width of collapsed sidebar */
+                width: calc(100% - 70px);
+                padding: 0 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" placeholder="Search chats..." id="search-input">
+            </div>
+
+            <button class="new-chat-btn" id="new-chat-btn">
+                <i class="fas fa-plus icon"></i>
+                <span>New Chat</span>
+                <i class="fas fa-ellipsis-v more-icon"></i>
+            </button>
+            
+            <button class="explore-gems-btn">
+                <i class="fas fa-gem icon"></i>
+                <span>Explore Gems</span>
+            </button>
+
+            <div class="recent-section">
+                <h3>Recent</h3>
+                <ul class="history-list">
+                    </ul>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="#" class="d-none"><i class="fas fa-cog"></i>Settings</a>
+                <a href="#" class="d-none"><i class="fas fa-question-circle"></i>Help & Support</a>
+                <a href="#" class="d-none"><i class="fas fa-history"></i>Activity</a>
+
+            </div>
+        </div>
+
+
+            <div class="chat-area" id="chat-area">
+                <div class="chat-content" id="chat-content">
+                    <h1 class="greeting" id="greeting">Hello! How can I help you today?</h1>
+                    </div>
+            </div>
+
+            <div class="input-container">
+                <div id="input-box" class="input-box">
+                    <textarea id="main-input" placeholder="Message MKCE Direct..." rows="1"></textarea>
+                    
+                    <input type="file" id="file-upload" class="d-none" multiple>
+                    <button id="file-upload-btn" class="icon-btn"><i class="fas fa-paperclip"></i></button>
+
+                    <button id="mic-button" class="icon-btn mic-btn"><i class="fas fa-microphone"></i></button>
+                    
+                    <button id="send-button" class="icon-btn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // --- 0. CONFIGURATION & STATE ---
+            const apiKey = "AIzaSyCkOAxOHcxk84WRMKz-QqAb8TymMj6VH4o";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            let history = []; // Stores the current chat history for the API
+            let searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || []; // Stores the history list for the sidebar
+            let activeChatId = null;
+
+            // --- 1. DOM Element Selectors ---
+            const newChatBtn = document.getElementById('new-chat-btn');
+            const greetingElement = document.getElementById('greeting');
+            const mainInput = document.getElementById('main-input');
+            const inputBox = document.getElementById('input-box');
+            const sendButton = document.getElementById('send-button');
+            const chatContent = document.getElementById('chat-content');
+            const chatArea = document.getElementById('chat-area');
+            const fileUpload = document.getElementById('file-upload');
+            const micButton = document.getElementById('mic-button');
+            const historyList = document.querySelector('.history-list');
+            const micIcon = micButton.querySelector('i'); // New selector for mic icon
+
+            // --- 2. UTILITY FUNCTIONS ---
+            function saveSearchHistory() {
+                localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+            }
+
+            function scrollToBottom() {
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
+            
+            // Function to dynamically adjust textarea height
+            function adjustTextareaHeight() {
+                mainInput.style.height = 'auto'; // Reset height
+                // Set height to scroll height, but limit to a max height set in CSS
+                mainInput.style.height = mainInput.scrollHeight + 'px';
+            }
+
+            // Function to create a message element
+            function createMessageElement(text, role, isLoading = false) {
+                // ... (existing createMessageElement implementation) ...
+                const messageContainer = document.createElement('div');
+                messageContainer.classList.add('message-container');
+
+                if (role === 'user') {
+                    messageContainer.classList.add('user-message-container');
+                    
+                    // Create Text Content
+                    const textElement = document.createElement('div');
+                    textElement.classList.add('message-text', 'user-message-text');
+                    textElement.innerHTML = text; // User text is not markdown, just clean text
+
+                    // Create Avatar
+                    const avatar = document.createElement('div');
+                    avatar.classList.add('message-avatar', 'user-avatar');
+                    avatar.textContent = 'U';
+                    
+                    // Append elements
+                    messageContainer.appendChild(textElement);
+                    messageContainer.appendChild(avatar);
+
+                } else if (role === 'ai') {
+                    
+                    // Create Avatar (Only for AI messages now)
+                    let avatar = document.createElement('div');
+                    avatar.classList.add('message-avatar', 'ai-avatar');
+                    avatar.textContent = 'AI';
+                    
+                    // Create Text Content
+                    const textElement = document.createElement('div');
+                    textElement.classList.add('message-text');
+                    
+                    if (isLoading) {
+                        textElement.innerHTML = `<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>`;
+                    } else {
+                        // Use marked.js to convert Markdown to HTML
+                        textElement.innerHTML = marked.parse(text);
+                    }
+
+                    // Create the bubble wrapper
+                    const bubbleWrapper = document.createElement('div');
+                    bubbleWrapper.classList.add('ai-message-container');
+                    // The bubble wrapper contains the text element
+                    bubbleWrapper.appendChild(textElement);
+                    
+                    // Append elements
+                    messageContainer.appendChild(avatar);
+                    messageContainer.appendChild(bubbleWrapper);
+                }
+
+                return messageContainer;
+            }
+
+            // Function to handle the rendering of a full chat history
+            function renderHistory(chatHistory) {
+                // ... (existing renderHistory implementation) ...
+                chatContent.innerHTML = ''; // Clear existing content
+                
+                if (chatHistory.length === 0) {
+                    greetingElement.classList.remove('d-none');
+                    chatContent.appendChild(greetingElement);
+                    return;
+                } else {
+                    greetingElement.classList.add('d-none');
+                }
+
+                // Add all messages from the history array
+                chatHistory.forEach(message => {
+                    if (message.role === 'user' || message.role === 'model') {
+                        const role = message.role === 'model' ? 'ai' : 'user';
+                        const text = message.parts[0].text;
+                        const messageElement = createMessageElement(text, role, false);
+                        chatContent.appendChild(messageElement);
+                    }
+                });
+
+                scrollToBottom();
+            }
+
+            // Function to render the sidebar history
+            function renderRecentHistory() {
+                // ... (existing renderRecentHistory implementation) ...
+                historyList.innerHTML = '';
+                searchHistory.forEach(chatItem => {
+                    const li = document.createElement('li');
+                    li.setAttribute('data-chat-id', chatItem.id);
+                    // Add click handler to load the chat
+                    li.addEventListener('click', (e) => {
+                         // Only load chat if the delete button was not clicked
+                        if (!e.target.closest('.delete-history-btn')) {
+                            loadChat(chatItem);
+                        }
+                    });
+
+                    const wrapper = document.createElement('div');
+                    wrapper.classList.add('history-item-wrapper');
+
+                    const textSpan = document.createElement('span');
+                    textSpan.classList.add('history-query-text');
+                    textSpan.textContent = chatItem.query;
+
+                    const deleteBtn = document.createElement('i');
+                    deleteBtn.classList.add('fas', 'fa-trash-alt', 'delete-history-btn');
+                    deleteBtn.title = 'Delete Chat';
+                    deleteBtn.addEventListener('click', () => deleteChat(chatItem.id));
+
+                    wrapper.appendChild(textSpan);
+                    wrapper.appendChild(deleteBtn);
+                    li.appendChild(wrapper);
+                    historyList.appendChild(li);
+                });
+            }
+
+            // Function to handle a new chat session
+            function newChat(shouldClearHistory = true) {
+                // ... (existing newChat implementation) ...
+                chatContent.innerHTML = '';
+                greetingElement.classList.remove('d-none');
+                chatContent.appendChild(greetingElement);
+                mainInput.value = '';
+                adjustTextareaHeight();
+
+                if (shouldClearHistory) {
+                    history = []; // Clear current API history
+                    activeChatId = null; // Clear active ID
+                }
+            }
+
+            // Function to delete a chat item
+            function deleteChat(chatId) {
+                // ... (existing deleteChat implementation) ...
+                 // Filter out the deleted chat from the array
+                searchHistory = searchHistory.filter(item => item.id !== chatId);
+                saveSearchHistory();
+                renderRecentHistory();
+
+                // If the deleted chat was the active one, start a new chat
+                if (activeChatId === chatId) {
+                    newChat(true);
+                }
+            }
+            
+            // Function to save the current chat to the sidebar history
+            function saveCurrentChat(query, aiResponseText, shouldRenderRecent = true) {
+                // ... (existing saveCurrentChat implementation) ...
+                const newChatId = activeChatId || Date.now();
+                const displayQuery = query.substring(0, 50) + (query.length > 50 ? '...' : '');
+
+                const newHistoryItem = {
+                    id: newChatId,
+                    query: displayQuery,
+                    // Deep copy and filter to only store messages, not model calls/system instructions
+                    fullChat: history.filter(m => m.role === 'user' || m.role === 'model')
+                };
+
+                // Remove old entry if it exists (for updating an existing chat)
+                searchHistory = searchHistory.filter(item => item.id !== newChatId);
+                
+                // Prepend new item, keep only the latest 10
+                searchHistory.unshift(newHistoryItem);
+                searchHistory = searchHistory.slice(0, 10);
+                saveSearchHistory();
+                activeChatId = newChatId; // Set the active chat ID to the new one
+
+                if (shouldRenderRecent) {
+                    renderRecentHistory();
+                }
+            }
+
+            // Loads a previous chat session
+            function loadChat(chatItem) {
+                // ... (existing loadChat implementation) ...
+                // 1. Reset to a new chat state without clearing the current history item's content
+                newChat(false); 
+                // 2. Set the global history array to the loaded chat's history
+                history = chatItem.fullChat.slice(); // Use slice() for a deep copy
+                // 3. Set the active chat ID
+                activeChatId = chatItem.id; 
+                // 4. Render the chat content from the loaded history
+                renderHistory(history);
+            }
+
+            // --- 3. CORE GEMINI API FUNCTION ---
+            async function callGemini(userQuery) {
+                // ... (existing callGemini implementation) ...
+                const systemPrompt = "You are Gemini, a helpful and friendly AI assistant. Respond concisely but accurately, using Markdown formatting for clarity.";
+
+                // Add user query to history
+                history.push({ role: "user", parts: [{ text: userQuery }] });
+                
+                // 1. Create User Message Element
+                const userMessage = createMessageElement(userQuery, 'user', false);
+                chatContent.appendChild(userMessage);
+                scrollToBottom();
+
+                // 2. Create Loading Bubble
+                const loadingBubble = createMessageElement('', 'ai', true);
+                chatContent.appendChild(loadingBubble);
+                scrollToBottom();
+
+                const payload = {
+                    contents: history,
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+
+                // Exponential backoff retry logic
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            const errorBody = await response.json();
+                            throw new Error(`API returned status ${response.status}: ${errorBody.error.message}`);
+                        }
+
+                        const result = await response.json();
+                        const candidate = result.candidates?.[0];
+                        return candidate?.content?.parts?.[0]?.text || "Sorry, I received an empty response. Please try again.";
+
+                    } catch (error) {
+                        console.error(`Gemini API call failed (attempt ${attempt + 1}):`, error);
+                        if (attempt === 2) {
+                            return "I'm sorry, I was unable to connect to the AI service. Please try again later.";
+                        }
+                        // Simple linear backoff
+                        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+                    }
+                }
+            }
+
+            // Function to handle the entire send process
+            async function handleSend() {
+                 // ... (existing handleSend implementation) ...
+                const userQuery = mainInput.value.trim();
+                
+                if (userQuery === "") {
+                    return;
+                }
+
+                // 1. Reset input area
+                mainInput.value = '';
+                adjustTextareaHeight();
+                mainInput.focus();
+
+                // 2. Hide greeting on first message
+                greetingElement.classList.add('d-none');
+
+                // 3. Call the API
+                const aiResponseText = await callGemini(userQuery);
+
+                // 4. Replace loading bubble with final message
+                const loadingBubble = chatContent.lastChild;
+                if (loadingBubble && loadingBubble.querySelector('.loading-dot')) {
+                    if (aiResponseText && aiResponseText.length > 0) {
+                        const finalAiMessage = createMessageElement(aiResponseText, 'ai', false);
+                        loadingBubble.replaceWith(finalAiMessage);
+                        
+                        // 5. Update history array and save sidebar history
+                        history.push({ role: "model", parts: [{ text: aiResponseText }] });
+                        saveCurrentChat(userQuery, aiResponseText);
+                    } else {
+                        const finalAiMessage = createMessageElement("Sorry, I received an empty response. Please try again.", 'ai', false);
+                        loadingBubble.replaceWith(finalAiMessage);
+                        // Do not save to history on error
+                    }
+                }
+
+                scrollToBottom();
+            }
+
+
+            // --- 4. SPEECH RECOGNITION SETUP ---
+            let recognition;
+            let isRecording = false;
+            // Use vendor prefix check for cross-browser compatibility
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (typeof SpeechRecognition !== "undefined") {
+                // Initialize the Speech Recognition object
+                recognition = new SpeechRecognition();
+                recognition.continuous = false; // Set to false for a single command/query
+                recognition.interimResults = false;
+                recognition.lang = 'en-US'; // Default language
+
+                // Event fired when speech recognition is starting
+                recognition.onstart = function() {
+                    isRecording = true;
+                    micIcon.classList.remove('fa-microphone');
+                    micIcon.classList.add('fa-stop-circle');
+                    micButton.classList.add('is-active');
+                    mainInput.placeholder = "Listening...";
+                };
+
+                // Event fired when a result is returned
+                recognition.onresult = function(event) {
+                    const last = event.results.length - 1;
+                    const text = event.results[last][0].transcript;
+                    mainInput.value = text; // Put the transcribed text into the input box
+                    adjustTextareaHeight();
+                    mainInput.focus();
+                    // Optionally, you can add code here to automatically call handleSend()
+                    // if (text.trim().length > 0) {
+                    //     handleSend();
+                    // }
+                };
+
+                // Event fired on error (e.g., no-speech, not-allowed)
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    if (event.error === 'not-allowed') {
+                         alert('Microphone permission denied. Please enable it in your browser settings.');
+                    }
+                };
+
+                // Event fired when speech recognition service has disconnected
+                recognition.onend = function() {
+                    isRecording = false;
+                    micIcon.classList.remove('fa-stop-circle');
+                    micIcon.classList.add('fa-microphone');
+                    micButton.classList.remove('is-active');
+                    mainInput.placeholder = "Message MKCE Direct...";
+                };
+
+                // Click handler to toggle recording state
+                micButton.addEventListener('click', () => {
+                    if (isRecording) {
+                        recognition.stop();
+                    } else {
+                        recognition.start();
+                    }
+                });
+
+            } else {
+                // Hide the button if not supported by the browser
+                micButton.style.display = 'none';
+                console.log("Web Speech API not supported in this browser.");
+            }
+            // End of --- 4. SPEECH RECOGNITION SETUP ---
+
+
+            // --- 5. EVENT LISTENERS AND INITIALIZATION ---
+            
+            // New Chat button
+            newChatBtn.addEventListener('click', () => newChat(true));
+            
+            // Send button click
+            sendButton.addEventListener('click', handleSend);
+
+            // Send on Enter key press (but not with Shift+Enter)
+            mainInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                }
+            });
+            
+            // Textarea height adjustment on input
+            mainInput.addEventListener('input', adjustTextareaHeight);
+
+            // File upload trigger
+            fileUploadBtn.addEventListener('click', () => {
+                fileUpload.click();
+            });
+
+            // File upload change (Placeholder for actual file handling)
+            fileUpload.addEventListener('change', (e) => {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    alert(`Selected ${files.length} file(s) for upload. (Implementation pending)`);
+                    // Note: Actual file handling for the Gemini API would go here (e.g., base64 encoding and passing to the model)
+                }
+            });
+
+            // Hover/Focus effect for the main input box (Unchanged)
+            inputBox.addEventListener('mouseenter', () => {
+                inputBox.classList.add('is-focused');
+            });
+
+            inputBox.addEventListener('mouseleave', () => {
+                if (document.activeElement !== mainInput) {
+                    inputBox.classList.remove('is-focused');
+                }
+            });
+
+            mainInput.addEventListener('focus', () => {
+                inputBox.classList.add('is-focused');
+            });
+
+            mainInput.addEventListener('blur', () => {
+                inputBox.classList.remove('is-focused');
+            });
+
+            // --- 6. INITIAL SETUP ---
+            // Load and render history from localStorage
+            renderRecentHistory();
+
+            // Initial animation for the Greeting and Input Container (Unchanged)
+            // Note: This animation will now only run if history.length is 0 on load.
+            if (searchHistory.length === 0) {
+                 anime.timeline({
+                    easing: 'easeOutExpo',
+                    duration: 800
+                })
+                .add({
+                    targets: '#greeting',
+                    opacity: [0, 1],
+                    translateY: [20, 0]
+                }, 0) 
+                .add({
+                    targets: '.input-container',
+                    opacity: [0, 1],
+                    translateY: [20, 0]
+                }, 100); 
+            } else {
+                // If history exists, load the latest chat on startup
+                const latestChat = searchHistory[0];
+                loadChat(latestChat);
+                // Ensure the input container is visible without animation
+                document.querySelector('.input-container').style.opacity = 1;
+            }
+           
+        });
+    </script>
+</body>
+</html>
